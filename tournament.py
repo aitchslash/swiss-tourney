@@ -90,8 +90,77 @@ def reportMatch(winner, loser, draw=False, tourneyID=1):
     else:
         print "Two players are needed for a match"
     
+def swissPairings2():
+    standings = playerStandings()
+    
+    # get prior match-ups from results
+    results = connect2('select winner, loser from results', True)
+    
+    # get round number, assume everyone has played 
+    #   equal number of games before swissPairings can be called
+    roundNumber = standings[0][3] + 1
+    numMatches = countPlayers() / 2
+    # generate trivial solution from standings
+    #   with no dupes it's maximized 
+    pairings = []
+    for i in range(0, numMatches):
+        pairings.append((standings[i*2][0], standings[i*2][1], 
+            standings[i*2+1][0], standings[i*2+1][1]))
+    # duplicate matchups impossible for rounds <= 2
+    if roundNumber <= 2:
+        return pairings
+    # for later rounds need to check for duplicates
+    
+    # create disallowed list
+    disallowed = []
+    for matchup in results:
+        disallowed.append(matchup)
+        disallowed.append((matchup[1], matchup[0]))
 
- 
+    # loop through pairings checking for duplicates
+    dupes = False
+    for pairing in pairings:
+        if (pairing[0], pairing[2]) in disallowed:
+            dupes = True
+    if dupes == False:
+        return pairings
+    else:
+        print "DUPES!!!!"
+        # get player list (w/ points?)
+        # make pairs (if pts, could evaluate here?)
+        # evaluate 
+    return pairings
+
+def generatePairs(players):
+    a = players[0]
+    holder = []
+    for i in range(1,len(players)): # could call count players
+        pairOne = (a, players[0])
+        holder = [pairOne]
+        for remainder in generatePairs(players[1:i]+players[i+1:]):
+            holder.append(remainder)
+
+
+# just for testing ATM, might not need
+def checkDupes(pairings):
+    results = connect2('select winner, loser from results', True)
+    disallowed = []
+    for matchup in results:
+        disallowed.append(matchup)
+        disallowed.append((matchup[1], matchup[0]))
+
+    print disallowed # test print
+
+    # loop through pairings checking for duplicates
+    dupes = False
+    for pairing in pairings:
+        print pairing[0], pairing[2] #test print
+        if (pairing[0], pairing[2]) in disallowed:
+            dupes = True
+    if dupes == False:
+        return pairings
+    else:
+        print "DUPES"
  
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
