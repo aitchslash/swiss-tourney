@@ -15,6 +15,7 @@ def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
     return psycopg2.connect("dbname=tournament")
 
+# set dataReturn to True if you want data returned
 def connect2(statement, dataReturn=False):
     db = psycopg2.connect("dbname=tournament")
     c = db.cursor()
@@ -139,6 +140,45 @@ def generatePairs(players):
         holder = [pairOne]
         for remainder in generatePairs(players[1:i]+players[i+1:]):
             holder.append(remainder)
+
+# will have to alter for ties, but good 
+def makePointsDict():
+    pts = {}
+    standings = playerStandings()
+    # check for ties enabled, if not
+    for player in standings:
+        pts[player[0]] = int(player[2]*2)
+    # else, with ties enabled
+    # ties enabled code here
+    return pts
+
+def getBestPairings():
+    # iniialize holder
+    bestHolder = []
+    # need disallowed, standings
+    standings = playerStandings()
+    playerList = makePlayerList()
+    ptsDict = makePointsDict()
+    for pairSet in genPairs(playerList):
+        # test: w/o disallowed
+        print pairSet
+        for pair in pairSet:
+            print pair
+            ptDifference =  abs(ptsDict[pair[0]] - ptsDict[pair[1]])
+            print "ptDiff = : " + str(ptDifference)
+            # if ptDiff == 0: return pairSet
+            bestHolder.append([ptDifference, pairSet])
+            bestHolder.sort(key=lambda x: x[0])
+    return bestHolder[0][1] #first/best one, set index
+        
+
+def makePlayerList():
+    # get player list and do a bit of formatting
+    playerTuples = connect2("SELECT playerID FROM players", True)
+    playerList = []
+    for item in playerTuples:
+        playerList.append(item[0])
+    return playerList
 
 # alternate implementation using a generator
 #   count call count players
