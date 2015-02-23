@@ -140,6 +140,18 @@ def generatePairs(players):
         for remainder in generatePairs(players[1:i]+players[i+1:]):
             holder.append(remainder)
 
+# alternate implementation using a generator
+#   count call count players
+def genPairs(playerList):
+    if len(playerList) < 2:
+        yield playerList
+        return
+    first = playerList[0]
+    for i in range(1, len(playerList)):
+        pair = (first, playerList[i])
+        for remainder in genPairs(playerList[1:i]+playerList[i+1:]):
+            yield [pair] + remainder
+
 
 # just for testing ATM, might not need
 def checkDupes(pairings):
