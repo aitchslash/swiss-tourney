@@ -57,6 +57,9 @@ def registerPlayer(name):
     db.commit()
     db.close()
 
+def nameFromID(playerID):
+    name = connect2('select name from players where playerID=%s' % (playerID), True)
+    return name
 
 def playerStandings(tourneyID=1):
     """Returns a list of the players and their win records, sorted by wins.
@@ -132,6 +135,56 @@ def swissPairings2():
         # evaluate 
     return pairings
 
+def swissPairings3():
+    standings = playerStandings()
+    
+    # get round number, assume everyone has played 
+    #   equal number of games before swissPairings can be called
+    roundNumber = standings[0][3] + 1
+    numMatches = countPlayers() / 2
+    # generate trivial solution from standings
+    #   with no dupes it's maximized 
+    pairings = []
+    
+    # duplicate matchups impossible for rounds <= 2
+    if roundNumber <= 2:
+        for i in range(0, numMatches):
+            pairings.append((standings[i*2][0], standings[i*2][1], 
+                standings[i*2+1][0], standings[i*2+1][1]))
+        return pairings
+    # for later rounds need to check for duplicates
+    else:
+        # get prior match-ups from results
+        #results = connect2('select winner, loser from results', True)
+        bestPairTuples = getBestPairings()
+        # get name: connect2('select name from players where playerID=%s' % (200), True)
+        for pair in bestPairTuples:
+            pairings.append([pair[0], nameFromID(pair[0]),
+                            pair[1], nameFromID(pair[1])])
+        return pairings
+
+'''    
+        # create disallowed list
+        disallowed = []
+        for matchup in results:
+            disallowed.append(matchup)
+            disallowed.append((matchup[1], matchup[0]))
+
+        # loop through pairings checking for duplicates
+        dupes = False
+        for pairing in pairings:
+            if (pairing[0], pairing[2]) in disallowed:
+                dupes = True
+        if dupes == False:
+            return pairings
+        else:
+            print "DUPES!!!!"
+            # get player list (w/ points?)
+            # make pairs (if pts, could evaluate here?)
+            # evaluate
+            ''' 
+    #return pairings
+
 def generatePairs(players):
     a = players[0]
     holder = []
@@ -155,20 +208,32 @@ def makePointsDict():
 def getBestPairings():
     # iniialize holder
     bestHolder = []
-    # need disallowed, standings
-    standings = playerStandings()
+    results = connect2('select winner, loser from results', True)
+    standings = playerStandings() # may be redundant
     playerList = makePlayerList()
     ptsDict = makePointsDict()
+    # create disallowed list
+    disallowed = []
+    for matchup in results:
+        disallowed.append(matchup)
+        disallowed.append((matchup[1], matchup[0]))
     for pairSet in genPairs(playerList):
-        # test: w/o disallowed
-        print pairSet
+        # test: w/o disallowed, disallowed in progress
+        ptDifference = 0
+        print pairSet # testing
         for pair in pairSet:
-            print pair
-            ptDifference =  abs(ptsDict[pair[0]] - ptsDict[pair[1]])
+            reverse = (pair[1], pair[0]) #testing
+            print pair, reverse #testing
+            print (pair in disallowed or reverse in disallowed)
+            if (pair in disallowed or reverse in disallowed):
+                print "disallowed!" # test print
+                ptDifference += 10 # crude, should refactor
+            ptDifference +=  abs(ptsDict[pair[0]] - ptsDict[pair[1]])
             print "ptDiff = : " + str(ptDifference)
             # if ptDiff == 0: return pairSet
-            bestHolder.append([ptDifference, pairSet])
-            bestHolder.sort(key=lambda x: x[0])
+        bestHolder.append([ptDifference, pairSet])
+    bestHolder.sort(key=lambda x: x[0])
+    print bestHolder #test print
     return bestHolder[0][1] #first/best one, set index
         
 
