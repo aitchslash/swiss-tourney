@@ -1,4 +1,4 @@
-drop view if exists standings;
+-- drop view if exists standings;
 drop view if exists losses;
 drop view if exists wins;
 drop view if exists tieSum;
@@ -28,9 +28,9 @@ select
 	players.name,
 	coalesce(wins.wins, 0) as w, 
 	-- coalesce(losses.losses, 0) as l,
-	coalesce(tieSum.ties, 0) as t,
 	(coalesce(wins.wins, 0) + coalesce(losses.losses, 0)) +
 	coalesce(tieSum.ties, 0) as gp,
+	coalesce(tieSum.ties, 0) as t,
 	(coalesce(wins.wins, 0) * 2 + coalesce(tieSum.ties, 0)) as pts
 from 
 	players 
