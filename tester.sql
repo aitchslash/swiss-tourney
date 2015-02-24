@@ -1,7 +1,8 @@
 drop view if exists standings;
-drop view if exists losses;
+drop view if exists ties cascade;
+drop view if exists losses cascade;
 drop view if exists wins;
-drop view if exists ties;
+
 
 create view wins as select winner as id, count(*) as wins  
 	from results where draw = false group by winner;

@@ -59,9 +59,9 @@ def registerPlayer(name):
 
 def nameFromID(playerID):
     name = connect2('select name from players where playerID=%s' % (playerID), True)
-    return name
+    return name[0][0]
 
-def playerStandings(tourneyID=1):
+def playerStandings(tiesEnabled=False, tourneyID=1):
     """Returns a list of the players and their win records, sorted by wins.
 
     The first entry in the list should be the player in first place, or a player
@@ -73,9 +73,14 @@ def playerStandings(tourneyID=1):
         name: the player's full name (as registered)
         wins: the number of matches the player has won
         matches: the number of matches the player has played
+
+      With tiesEnabled=True tuples in list contain (id, name, wins, matches, ties, points)
+      sorted by points
     """
-    # uses 3 views
-    return connect2(open('tester.sql', "r").read(), True)
+    if tiesEnabled: 
+        return connect2(open('withTies.sql', "r").read(), True)
+    else: 
+        return connect2(open('tester.sql', "r").read(), True)
 
 def reportMatch(winner, loser, draw=False, tourneyID=1):
     """Records the outcome of a single match between two players.
@@ -94,7 +99,7 @@ def reportMatch(winner, loser, draw=False, tourneyID=1):
     else:
         print "Two players are needed for a match"
     
-def swissPairings():
+def swissPairings(tiesEnabled=False):
     """Returns a list of pairs of players for the next round of a match.
   
     Assuming that there are an even number of players registered, each player
@@ -109,7 +114,7 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-    standings = playerStandings()
+    standings = playerStandings(tiesEnabled)
     
     # get round number, assume everyone has played 
     #   equal number of games before swissPairings can be called
@@ -121,17 +126,19 @@ def swissPairings():
     
     # duplicate matchups impossible for rounds <= 2
     if roundNumber <= 2:
+        print "here" # test print
         for i in range(0, numMatches):
             pairings.append((standings[i*2][0], standings[i*2][1], 
                 standings[i*2+1][0], standings[i*2+1][1]))
         return pairings
     # for later rounds need to check for duplicates
     else:
-        bestPairTuples = getBestPairings()
+        print "there, not here" # test print
+        bestPairTuples = getBestPairings(tiesEnabled)
         # need to get in correct format
         for pair in bestPairTuples:
-            pairings.append([pair[0], nameFromID(pair[0]),
-                            pair[1], nameFromID(pair[1])])
+            pairings.append((pair[0], nameFromID(pair[0]),
+                            pair[1], nameFromID(pair[1])))
         return pairings
 
 # will have to alter for ties, but good 
@@ -145,7 +152,7 @@ def makePointsDict():
     # ties enabled code here
     return pts
 
-def getBestPairings():
+def getBestPairings(tiesEnabled=False):
     # iniialize holder
     bestHolder = []
     results = connect2('select winner, loser from results', True)
@@ -162,7 +169,7 @@ def getBestPairings():
         ptDifference = 0
         print pairSet # testing
         for pair in pairSet:
-            reverse = (pair[1], pair[0]) #testing
+            reverse = (pair[1], pair[0]) 
             print pair, reverse #testing
             print (pair in disallowed or reverse in disallowed)
             if (pair in disallowed or reverse in disallowed):
