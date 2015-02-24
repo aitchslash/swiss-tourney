@@ -3,7 +3,7 @@
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
-# ---- to do list ----
+# ---- to do list ---- nb
 #   bye implementation - if count is even addPlayer
 #   tie implementation
 #   cursor.execute(open("schema.sql", "r").read())
@@ -149,7 +149,7 @@ def getBestPairings(tiesEnabled=False):
     # iniialize holder
     bestHolder = []
     results = connect2('select winner, loser from results', True)
-    standings = playerStandings() # may be redundant
+    standings = playerStandings() # may be redundant, test removal, nb
     playerList = makePlayerList()
     ptsDict = makePointsDict()
     # create disallowed list
@@ -158,13 +158,14 @@ def getBestPairings(tiesEnabled=False):
         disallowed.append(matchup)
         disallowed.append((matchup[1], matchup[0]))
     for pairSet in genPairs(playerList):
+        #print "back in getBestPairings" # nb
         ptDifference = 0
         for pair in pairSet:
             reverse = (pair[1], pair[0]) 
             if (pair in disallowed or reverse in disallowed):
                 ptDifference += 10 # crude, should refactor
             ptDifference +=  abs(ptsDict[pair[0]] - ptsDict[pair[1]])
-            # if ptDiff == 0: return pairSet, would be a good shortcut
+        if ptDifference == 0: return pairSet #, would be a good shortcut, nb
         bestHolder.append([ptDifference, pairSet])
     bestHolder.sort(key=lambda x: x[0])
     return bestHolder[0][1] #first/best one, set index
@@ -178,8 +179,9 @@ def makePlayerList():
         playerList.append(item[0])
     return playerList
 
-#   count call count players
+#   count call count players, nb
 def genPairs(playerList):
+    #print "called genPairs" #nb
     if len(playerList) < 2:
         yield playerList
         return
