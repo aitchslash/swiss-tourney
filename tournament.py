@@ -142,14 +142,17 @@ def swissPairings(tiesEnabled=False):
         return pairings
 
 # will have to alter for ties, but good 
-def makePointsDict():
+def makePointsDict(tiesEnabled=False):
     pts = {}
-    standings = playerStandings()
+    standings = playerStandings(tiesEnabled)
     # check for ties enabled, if not
-    for player in standings:
-        pts[player[0]] = int(player[2]*2)
+    if not tiesEnabled:
+        for player in standings:
+            pts[player[0]] = int(player[2]*2)
     # else, with ties enabled
-    # ties enabled code here
+    else:
+        for player in standings:
+            pts[player[0]] = int(player[5])
     return pts
 
 def getBestPairings(tiesEnabled=False):
