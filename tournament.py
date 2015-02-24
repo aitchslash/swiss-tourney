@@ -37,11 +37,6 @@ def deletePlayers():
 def countPlayers():
     return int(connect2("SELECT COUNT(*) FROM players", True)[0][0])
 
-def registerPlayer2(name):
-    subString = "INSERT INTO players (name) values (%s)", (name,)
-    statement = subString[0] + ", " + str(subString[1])
-    connect2(statement)
-
 def registerPlayer(name):
     """Adds a player to the tournament database.
   
@@ -115,7 +110,6 @@ def swissPairings(tiesEnabled=False):
         name2: the second player's name
     """
     standings = playerStandings(tiesEnabled)
-    
     # get round number, assume everyone has played 
     #   equal number of games before swissPairings can be called
     roundNumber = standings[0][3] + 1
@@ -123,17 +117,14 @@ def swissPairings(tiesEnabled=False):
     # generate trivial solution from standings
     #   with no dupes it's maximized 
     pairings = []
-    
     # duplicate matchups impossible for rounds <= 2
     if roundNumber <= 2:
-        print "here" # test print
         for i in range(0, numMatches):
             pairings.append((standings[i*2][0], standings[i*2][1], 
                 standings[i*2+1][0], standings[i*2+1][1]))
         return pairings
     # for later rounds need to check for duplicates
     else:
-        print "there, not here" # test print
         bestPairTuples = getBestPairings(tiesEnabled)
         # need to get in correct format
         for pair in bestPairTuples:
@@ -141,7 +132,6 @@ def swissPairings(tiesEnabled=False):
                             pair[1], nameFromID(pair[1])))
         return pairings
 
-# will have to alter for ties, but good 
 def makePointsDict(tiesEnabled=False):
     pts = {}
     standings = playerStandings(tiesEnabled)
@@ -168,22 +158,15 @@ def getBestPairings(tiesEnabled=False):
         disallowed.append(matchup)
         disallowed.append((matchup[1], matchup[0]))
     for pairSet in genPairs(playerList):
-        # test: w/o disallowed, disallowed in progress
         ptDifference = 0
-        print pairSet # testing
         for pair in pairSet:
             reverse = (pair[1], pair[0]) 
-            print pair, reverse #testing
-            print (pair in disallowed or reverse in disallowed)
             if (pair in disallowed or reverse in disallowed):
-                print "disallowed!" # test print
                 ptDifference += 10 # crude, should refactor
             ptDifference +=  abs(ptsDict[pair[0]] - ptsDict[pair[1]])
-            print "ptDiff = : " + str(ptDifference)
-            # if ptDiff == 0: return pairSet
+            # if ptDiff == 0: return pairSet, would be a good shortcut
         bestHolder.append([ptDifference, pairSet])
     bestHolder.sort(key=lambda x: x[0])
-    print bestHolder #test print
     return bestHolder[0][1] #first/best one, set index
         
 
@@ -205,25 +188,3 @@ def genPairs(playerList):
         pair = (first, playerList[i])
         for remainder in genPairs(playerList[1:i]+playerList[i+1:]):
             yield [pair] + remainder
-
-
-# just for testing ATM, might not need
-def checkDupes(pairings):
-    results = connect2('select winner, loser from results', True)
-    disallowed = []
-    for matchup in results:
-        disallowed.append(matchup)
-        disallowed.append((matchup[1], matchup[0]))
-
-    print disallowed # test print
-
-    # loop through pairings checking for duplicates
-    dupes = False
-    for pairing in pairings:
-        print pairing[0], pairing[2] #test print
-        if (pairing[0], pairing[2]) in disallowed:
-            dupes = True
-    if dupes == False:
-        return pairings
-    else:
-        print "DUPES"
