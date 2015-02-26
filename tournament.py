@@ -5,7 +5,9 @@
 
 # ---- to do list ---- nb
 #   bye implementation - if count is even addPlayer
-#   tie implementation
+#   tie implementation - DONE
+#   tourney implementation - underway
+#   remove tester.sql/withTies.sql from git
 #   cursor.execute(open("schema.sql", "r").read())
 #   newstr = "".join(oldstr.split('\n'))
 
@@ -56,7 +58,7 @@ def nameFromID(playerID):
     name = connect2('select name from players where playerID=%s' % (playerID), True)
     return name[0][0]
 
-def playerStandings(tiesEnabled=False, tourneyID=1):
+def playerStandingsOld(tiesEnabled=False, tourneyID=1):
     """Returns a list of the players and their win records, sorted by wins.
 
     The first entry in the list should be the player in first place, or a player
@@ -76,6 +78,72 @@ def playerStandings(tiesEnabled=False, tourneyID=1):
         return connect2(open('withTies.sql', "r").read(), True)
     else: 
         return connect2(open('tester.sql', "r").read(), True)
+
+def playerStandings(tiesEnabled=False, tourneyID=1):
+    tiesStatement = '''
+drop view if exists losses;
+drop view if exists wins;
+drop view if exists tieSum;
+drop view if exists ties;
+
+create view wins as select winner as id, count(*) as wins  
+    from results where draw = false AND tourneyID=%s  group by winner;
+
+create view losses as select loser as id, count(*) as losses 
+    from results where draw = false AND tourneyID=%s group by loser;
+
+create view ties as select winner as id from results
+    where draw = True
+    union all
+    select loser from results
+    where draw = True
+    AND tourneyID=%s;
+
+create view tieSum as select id, count(*) as ties
+    from ties group by id;
+
+select players.playerid as id, 
+    players.name,
+    coalesce(wins.wins, 0) as w, 
+    (coalesce(wins.wins, 0) + coalesce(losses.losses, 0)) +
+    coalesce(tieSum.ties, 0) as gp,
+    coalesce(tieSum.ties, 0) as t,
+    (coalesce(wins.wins, 0) * 2 + coalesce(tieSum.ties, 0)) as pts
+from players 
+    left join wins on players.playerid = wins.id
+    left join losses on players.playerid = losses.id
+    left join tieSum on players.playerid = tieSum.id
+order by
+    pts desc;''' % (tourneyID, tourneyID, tourneyID)
+
+    noTiesStatement = '''
+    drop view if exists standings;
+drop view if exists ties cascade;
+drop view if exists losses cascade;
+drop view if exists wins;
+
+create view wins as select winner as id, count(*) as wins  
+    from results where draw = false AND tourneyID=%s group by winner;
+
+create view losses as select loser as id, count(*) as losses 
+    from results where draw = false AND tourneyID=%s group by loser;
+
+select 
+    players.playerid as id, 
+    players.name,
+    coalesce(wins.wins, 0) as w, 
+    (coalesce(wins.wins, 0) + coalesce(losses.losses, 0)) as gp
+from 
+    players 
+left join wins on players.playerid = wins.id
+left join losses on players.playerid = losses.id
+order by
+    wins.wins;''' % (tourneyID, tourneyID)
+    
+    if tiesEnabled: 
+        return connect2(tiesStatement, True)
+    else: 
+        return connect2(noTiesStatement, True)
 
 def reportMatch(winner, loser, draw=False, tourneyID=1):
     """Records the outcome of a single match between two players.
@@ -131,6 +199,11 @@ def swissPairings(tiesEnabled=False):
             pairings.append((pair[0], nameFromID(pair[0]),
                             pair[1], nameFromID(pair[1])))
         return pairings
+
+def swissPairings2(tiesEnabled=False, tourneyID=1):
+    standings = playerStandings(tiesEnabled, tourneyID)
+    # rip 'em apart and zip 'em back together again
+    pass 
 
 def makePointsDict(tiesEnabled=False):
     pts = {}
