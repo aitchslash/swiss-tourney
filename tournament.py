@@ -11,10 +11,17 @@
 #   cursor.execute(open("schema.sql", "r").read())
 #   newstr = "".join(oldstr.split('\n'))
 
+#-----wish list ---- nb
+# tourney table to ensure data integrity
+# add tourney function
+# alter table (players) to add extra columns
+
 import psycopg2
 
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
+    """ I'd love to eliminate this but I can't seem to wrap the
+        user escaping into connect2"""
     return psycopg2.connect("dbname=tournament")
 
 # set dataReturn to True if you want data returned
@@ -36,11 +43,15 @@ def deleteMatches():
 def deletePlayers():
     connect2("DELETE FROM players")
 
-def countPlayers():
-    return int(connect2("SELECT COUNT(*) FROM players", True)[0][0])
+def countPlayers(tourneyID=1):
+    """ Counts players for any given tourney id """
+    statement = "SELECT COUNT(*) FROM players WHERE tourney%d=TRUE" % tourneyID
+    return int(connect2(statement, True)[0][0])
+    #return int(connect2("SELECT COUNT(*) FROM players", True)[0][0]) # nb, old line
 
 def registerPlayer(name, tourneyID=1):
     """Adds a player to the tournament database."""
+    """ Default is the test tourney, insert an arg for a diff tourney"""
     db = connect()
     c = db.cursor()
     statement = "INSERT INTO players (name, tourney%d)" % tourneyID 
@@ -49,6 +60,11 @@ def registerPlayer(name, tourneyID=1):
     #c.execute("INSERT INTO players (name, tourney1) values (%s, True)", (name,)) # nb, old working line
     db.commit()
     db.close()
+
+def registerExistingPlayer(playerID, tourneyID):
+    """Adds already registered player to another tourney"""
+    statement = "UPDATE players SET tourney%d=True where playerID=%d" % (tourneyID, playerID)
+    connect2(statement)
 
 def nameFromID(playerID):
     name = connect2('select name from players where playerID=%s' % (playerID), True)
@@ -76,67 +92,82 @@ def playerStandingsOld(tiesEnabled=False, tourneyID=1):
         return connect2(open('tester.sql', "r").read(), True)
 
 def playerStandings(tiesEnabled=False, tourneyID=1):
+    """Returns a list of the players and their win records, sorted by wins.
+
+    The first entry in the list should be the player in first place, or a player
+    tied for first place if there is currently a tie.
+
+    Returns:
+      A list of tuples, each of which contains (id, name, wins, matches):
+        id: the player's unique id (assigned by the database)
+        name: the player's full name (as registered)
+        wins: the number of matches the player has won
+        matches: the number of matches the player has played
+
+      With tiesEnabled=True tuples in list contain (id, name, wins, matches, ties, points)
+      sorted by points
+    """
     tiesStatement = '''
-drop view if exists losses;
-drop view if exists wins;
-drop view if exists tieSum;
-drop view if exists ties;
+        drop view if exists losses;
+        drop view if exists wins;
+        drop view if exists tieSum;
+        drop view if exists ties;
 
-create view wins as select winner as id, count(*) as wins  
-    from results where draw = false AND tourneyID=%s  group by winner;
+        create view wins as select winner as id, count(*) as wins  
+            from results where draw = false AND tourneyID=%s  group by winner;
 
-create view losses as select loser as id, count(*) as losses 
-    from results where draw = false AND tourneyID=%s group by loser;
+        create view losses as select loser as id, count(*) as losses 
+            from results where draw = false AND tourneyID=%s group by loser;
 
-create view ties as select winner as id from results
-    where draw = True
-    union all
-    select loser from results
-    where draw = True
-    AND tourneyID=%s;
+        create view ties as select winner as id from results
+            where draw = True
+            union all
+            select loser from results
+            where draw = True
+            AND tourneyID=%s;
 
-create view tieSum as select id, count(*) as ties
-    from ties group by id;
+        create view tieSum as select id, count(*) as ties
+            from ties group by id;
 
-select players.playerid as id, 
-    players.name,
-    coalesce(wins.wins, 0) as w, 
-    (coalesce(wins.wins, 0) + coalesce(losses.losses, 0)) +
-    coalesce(tieSum.ties, 0) as gp,
-    coalesce(tieSum.ties, 0) as t,
-    (coalesce(wins.wins, 0) * 2 + coalesce(tieSum.ties, 0)) as pts
-from players 
-    left join wins on players.playerid = wins.id
-    left join losses on players.playerid = losses.id
-    left join tieSum on players.playerid = tieSum.id
-where
-    players.tourney%s = True
-order by
-    pts desc;''' % (tourneyID, tourneyID, tourneyID, tourneyID)
+        select players.playerid as id, 
+            players.name,
+            coalesce(wins.wins, 0) as w, 
+            (coalesce(wins.wins, 0) + coalesce(losses.losses, 0)) +
+            coalesce(tieSum.ties, 0) as gp,
+            coalesce(tieSum.ties, 0) as t,
+            (coalesce(wins.wins, 0) * 2 + coalesce(tieSum.ties, 0)) as pts
+        from players 
+            left join wins on players.playerid = wins.id
+            left join losses on players.playerid = losses.id
+            left join tieSum on players.playerid = tieSum.id
+        where
+            players.tourney%s = True
+        order by
+            pts desc;''' % (tourneyID, tourneyID, tourneyID, tourneyID)
 
     noTiesStatement = '''
-    drop view if exists standings;
-drop view if exists ties cascade;
-drop view if exists losses cascade;
-drop view if exists wins;
+        drop view if exists standings;
+            drop view if exists ties cascade;
+            drop view if exists losses cascade;
+            drop view if exists wins;
 
-create view wins as select winner as id, count(*) as wins  
-    from results where draw = false AND tourneyID=%s group by winner;
+            create view wins as select winner as id, count(*) as wins  
+                from results where draw = false AND tourneyID=%s group by winner;
 
-create view losses as select loser as id, count(*) as losses 
-    from results where draw = false AND tourneyID=%s group by loser;
+            create view losses as select loser as id, count(*) as losses 
+                from results where draw = false AND tourneyID=%s group by loser;
 
-select 
-    players.playerid as id, 
-    players.name,
-    coalesce(wins.wins, 0) as w, 
-    (coalesce(wins.wins, 0) + coalesce(losses.losses, 0)) as gp
-from 
-    players 
-left join wins on players.playerid = wins.id
-left join losses on players.playerid = losses.id
-order by
-    wins.wins;''' % (tourneyID, tourneyID)
+            select 
+                players.playerid as id, 
+                players.name,
+                coalesce(wins.wins, 0) as w, 
+                (coalesce(wins.wins, 0) + coalesce(losses.losses, 0)) as gp
+            from 
+                players 
+            left join wins on players.playerid = wins.id
+            left join losses on players.playerid = losses.id
+            order by
+                wins.wins;''' % (tourneyID, tourneyID)
     
     if tiesEnabled: 
         return connect2(tiesStatement, True)
