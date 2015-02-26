@@ -5,11 +5,12 @@
 
 # ---- to do list ---- nb
 #   bye implementation - if count is even addPlayer
-#   tie implementation
+#   tie implementation -- DONE
 #   cursor.execute(open("schema.sql", "r").read())
 #   newstr = "".join(oldstr.split('\n'))
 
 import psycopg2
+import itertools # nb, only used if rework is implemented
 
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
@@ -76,6 +77,145 @@ def playerStandings(tiesEnabled=False, tourneyID=1):
         return connect2(open('withTies.sql', "r").read(), True)
     else: 
         return connect2(open('tester.sql', "r").read(), True)
+
+def rework(tiesEnabled = True): # set to True for testing, nb
+    ptLevels = []
+    levelArray = []
+    if tiesEnabled:
+        standings = playerStandings(tiesEnabled)
+        for player in standings:
+            if player[5] not in ptLevels:
+                ptLevels.append(int(player[5]))
+        numLevels = len(ptLevels)
+        if numLevels == 1:
+            return # trivial case, all equal, just avoid repeats
+        else:
+            # construct Level array
+            for i in range(0,numLevels):
+                levelArray.append([])
+            # fill level array with players
+            for i in range(0,numLevels):
+                for player in standings:
+                    if ptLevels[i] == player[5]:
+                        levelArray[i].append(player[0])
+            # now that we have a lovely popluted array, get some combos!
+            usableCombos = [] #nb not needed, idt
+            # ptpenalty = 0 # nb, likely goes later inside loop
+            # loop over pt levels, nb
+            i = 0 # place holder for loop, nb
+            if len(levelArray[i]) > 1:
+                # holder = [] # nb, not needed yet
+                starterCombos = equalPointCombos(levelArray[i])
+
+            else:
+                starterCombos = unequalPtCombos(levelArray, i) # gotta write this, nb
+            # loop overStarterCombos
+            s = 0 #nb, holder for loop
+            # reduce working array
+            # workingArray = popFromWorking(starterCombos[s], levelArray, i)
+                
+        return ptLevels, levelArray, starterCombos # nb, messy return for testing
+    else:
+        return
+
+def rework2(tiesEndabled=True):
+    ptLevels = []
+    levelArray = []
+    if tiesEnabled:
+        standings = playerStandings(tiesEnabled)
+        for player in standings:
+            if player[5] not in ptLevels:
+                ptLevels.append(int(player[5]))
+        numLevels = len(ptLevels)
+        if numLevels == 1:
+            return # trivial case, all equal, just avoid repeats
+        else:
+            # construct Level array
+            for i in range(0,numLevels):
+                levelArray.append([])
+            # fill level array with players
+            for i in range(0,numLevels):
+                for player in standings:
+                    if ptLevels[i] == player[5]:
+                        levelArray[i].append(player[0])
+            # now that we have a lovely popluted array, get some combos!
+        # start it up, nb
+        if len(levelArray[0]) > 1:
+            seed = equalPointCombos(levelArray[0])
+    pass
+
+def tester2():
+    holder = []
+    ptLevels, levelArray, starterCombos = rework()
+    # assume enough levels, gotta fix, nb
+    # i = 3 # nb
+    for i in range(0,len(levelArray)-1): #rather count down, nb
+        combos = equalPointCombos(levelArray[i] + levelArray[i+1])
+        for combo in combos:
+            if combo not in holder:
+                holder.append(combo)
+    return holder
+
+
+def tester():
+    holder = []
+    ptLevels, levelArray, starterCombos = rework()
+    # assume enough levels, gotta fix, nb
+    # i = 3 # nb
+    for i in range(0,len(levelArray)-1): #rather count down, nb
+        combos = equalPointCombos(levelArray[i] + levelArray[i+1])
+        for combo in combos:
+            if combo not in holder:
+                holder.append(combo)
+    return holder
+
+
+def tester():
+    holder = []
+    ptLevels, levelArray, starterCombos = rework()
+    comboSize = 3
+    newCombos = equalPointCombos(levelArray[0] + levelArray[1])
+    mashUp = equalPointCombos(starterCombos, newCombos, 3)
+    return mashUp
+
+
+
+def getNextLevel(levelArray):
+    if len(levelArray[0]) > 1:
+        seed = equalPointCombos(levelArray[0])
+    else:
+        seed = unequalPtCombos
+
+
+def equalPointCombos(singleLevel, comboSize=2):
+    comboHolder = []
+    combos = itertools.combinations(singleLevel, comboSize)
+    for x in combos:
+        comboHolder.append(x)
+    return comboHolder
+
+def unequalPtCombos(workingArray, level):
+    # only one entry at level, combine with lower-adjacent
+    comboHolder = []
+    for entry in (workingArray[level + 1]):
+        comboHolder.append((workingArray[level][0], entry))
+    return comboHolder
+
+def pfw(seed, levelArray):
+    # assuming we have a seed it's either
+    # one deep e.g. [(1,2), (3,4), (5,6), (7,8)]
+    # or two deep 
+    # get it working for one deep
+    pass
+
+
+def popFromWorking(starter, workingArray, level):
+    workingArray[level].pop(workingArray[level].index(starter[0]))
+    workingArray[level].pop(workingArray[level].index(starter[1]))
+    # nb, check if len(level) = 0, if so pop
+    return workingArray
+
+
 
 def reportMatch(winner, loser, draw=False, tourneyID=1):
     """Records the outcome of a single match between two players.
@@ -179,7 +319,7 @@ def makePlayerList():
         playerList.append(item[0])
     return playerList
 
-#   count call count players, nb
+#   maybe use count players, nb
 def genPairs(playerList):
     #print "called genPairs" #nb
     if len(playerList) < 2:
