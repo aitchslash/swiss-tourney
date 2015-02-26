@@ -39,18 +39,14 @@ def deletePlayers():
 def countPlayers():
     return int(connect2("SELECT COUNT(*) FROM players", True)[0][0])
 
-def registerPlayer(name):
-    """Adds a player to the tournament database.
-  
-    The database assigns a unique serial id number for the player.  (This
-    should be handled by your SQL database schema, not in your Python code.)
-  
-    Args:
-      name: the player's full name (need not be unique).
-    """
+def registerPlayer(name, tourneyID=1):
+    """Adds a player to the tournament database."""
     db = connect()
     c = db.cursor()
-    c.execute("INSERT INTO players (name) values (%s)", (name,))
+    statement = "INSERT INTO players (name, tourney%d)" % tourneyID 
+    statement += "values (%s, True)"
+    c.execute (statement, (name,))
+    #c.execute("INSERT INTO players (name, tourney1) values (%s, True)", (name,)) # nb, old working line
     db.commit()
     db.close()
 
@@ -113,8 +109,10 @@ from players
     left join wins on players.playerid = wins.id
     left join losses on players.playerid = losses.id
     left join tieSum on players.playerid = tieSum.id
+where
+    players.tourney%s = True
 order by
-    pts desc;''' % (tourneyID, tourneyID, tourneyID)
+    pts desc;''' % (tourneyID, tourneyID, tourneyID, tourneyID)
 
     noTiesStatement = '''
     drop view if exists standings;
@@ -162,7 +160,7 @@ def reportMatch(winner, loser, draw=False, tourneyID=1):
     else:
         print "Two players are needed for a match"
     
-def swissPairings(tiesEnabled=False):
+def swissPairings(tiesEnabled=False, tourneyID=1):
     """Returns a list of pairs of players for the next round of a match.
   
     Assuming that there are an even number of players registered, each player
@@ -177,7 +175,7 @@ def swissPairings(tiesEnabled=False):
         id2: the second player's unique id
         name2: the second player's name
     """
-    standings = playerStandings(tiesEnabled)
+    standings = playerStandings(tiesEnabled, tourneyID)
     # get round number, assume everyone has played 
     #   equal number of games before swissPairings can be called
     roundNumber = standings[0][3] + 1
@@ -193,7 +191,7 @@ def swissPairings(tiesEnabled=False):
         return pairings
     # for later rounds need to check for duplicates
     else:
-        bestPairTuples = getBestPairings(tiesEnabled)
+        bestPairTuples = getBestPairings(tiesEnabled,tourneyID)
         # need to get in correct format
         for pair in bestPairTuples:
             pairings.append((pair[0], nameFromID(pair[0]),
@@ -205,9 +203,9 @@ def swissPairings2(tiesEnabled=False, tourneyID=1):
     # rip 'em apart and zip 'em back together again
     pass 
 
-def makePointsDict(tiesEnabled=False):
+def makePointsDict(tiesEnabled=False, tourneyID=1):
     pts = {}
-    standings = playerStandings(tiesEnabled)
+    standings = playerStandings(tiesEnabled,tourneyID)
     # check for ties enabled, if not
     if not tiesEnabled:
         for player in standings:
@@ -218,7 +216,7 @@ def makePointsDict(tiesEnabled=False):
             pts[player[0]] = int(player[5])
     return pts
 
-def getBestPairings(tiesEnabled=False):
+def getBestPairings(tiesEnabled=False, tourneyID=1):
     # iniialize holder
     bestHolder = []
     results = connect2('select winner, loser from results', True)
@@ -243,7 +241,6 @@ def getBestPairings(tiesEnabled=False):
     bestHolder.sort(key=lambda x: x[0])
     return bestHolder[0][1] #first/best one, set index
         
-
 def makePlayerList():
     # get player list and do a bit of formatting
     playerTuples = connect2("SELECT playerID FROM players", True)

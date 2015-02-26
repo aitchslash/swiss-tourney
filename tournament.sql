@@ -12,7 +12,9 @@ CREATE DATABASE tournament;
 
 CREATE TABLE players(
 	playerID serial PRIMARY KEY,
-	name text NOT NULL
+	name text NOT NULL,
+	tourney1 BOOLEAN default false,
+	tourney2 BOOLEAN default false
 );
 
 -- TourneyID will need a refernce when/if that's created
