@@ -190,7 +190,7 @@ def reportMatch(winner, loser, draw=False, tourneyID=1):
     db.commit()
     db.close()
         
-def swissPairings(tiesEnabled=False, tourneyID=1):
+def swissPairingsRecursive(tiesEnabled=False, tourneyID=1):
 
     """Recursively generates and evaluates all possible pairings
     Works brilliantly for up to 8 players.  Blows up for 16.
@@ -233,10 +233,15 @@ def swissPairings(tiesEnabled=False, tourneyID=1):
                             pair[1], nameFromID(pair[1])))
         return pairings
 
-def swissPairings2(tiesEnabled=False, tourneyID=1):
+def swissPairings(tiesEnabled=False, tourneyID=1):
     standings = playerStandings(tiesEnabled, tourneyID)
     # rip 'em apart and zip 'em back together again
-    pass 
+    i, j = standings[::2], standings[1::2]
+    pairings = zip(i,j)
+    holder = []
+    for pairing in pairings:
+        holder.append((pairing[0][0], pairing [0][1], pairing[1][0], pairing [1][1]))
+    return holder
 
 def makePointsDict(tiesEnabled=False, tourneyID=1):
     """ Returns a dictionary key playerID, value points accrued in a tourney"""
