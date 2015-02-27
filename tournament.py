@@ -234,6 +234,23 @@ def swissPairingsRecursive(tiesEnabled=False, tourneyID=1):
         return pairings
 
 def swissPairings(tiesEnabled=False, tourneyID=1):
+    """Returns a list of pairs of players for the next round of a match.
+  
+    Assuming that there are an even number of players registered, each player
+    appears exactly once in the pairings.  Each player is paired with another
+    player with an equal or nearly-equal win record, that is, a player adjacent
+    to him or her in the standings.
+  
+    Returns:
+      A list of tuples, each of which contains (id1, name1, id2, name2)
+        id1: the first player's unique id
+        name1: the first player's name
+        id2: the second player's unique id
+        name2: the second player's name
+    """
+    # bye needed?
+    if countPlayers(tourneyID=1) % 2 != 0:
+        registerPlayer("BYE", tourneyID)
     standings = playerStandings(tiesEnabled, tourneyID)
     # rip 'em apart and zip 'em back together again
     i, j = standings[::2], standings[1::2]
