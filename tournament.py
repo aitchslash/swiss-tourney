@@ -67,10 +67,11 @@ def registerExistingPlayer(playerID, tourneyID):
     connect2(statement)
 
 def nameFromID(playerID):
+    """ Returns full name from playerID """
     name = connect2('select name from players where playerID=%s' % (playerID), True)
     return name[0][0]
 
-def playerStandingsOld(tiesEnabled=False, tourneyID=1):
+def playerStandingsOld(tiesEnabled=False, tourneyID=1):  #nb, nicer in some ways but not in use
     """Returns a list of the players and their win records, sorted by wins.
 
     The first entry in the list should be the player in first place, or a player
@@ -180,19 +181,22 @@ def reportMatch(winner, loser, draw=False, tourneyID=1):
     Args:
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
+      draw: set to True for any tie.  Winner/Loser order no longer matters
     """
     
-    if winner != loser:
-        db = connect()
-        c = db.cursor()
-        c.execute("INSERT INTO results (winner, loser, draw, tourneyID) values (%s, %s, %s, %s)", (winner, loser, draw, tourneyID))
-        db.commit()
-        db.close()
-    else:
-        print "Two players are needed for a match"
-    
+    db = connect()
+    c = db.cursor()
+    c.execute("INSERT INTO results (winner, loser, draw, tourneyID) values (%s, %s, %s, %s)", (winner, loser, draw, tourneyID))
+    db.commit()
+    db.close()
+        
 def swissPairings(tiesEnabled=False, tourneyID=1):
-    """Returns a list of pairs of players for the next round of a match.
+
+    """Recursively generates and evaluates all possible pairings
+    Works brilliantly for up to 8 players.  Blows up for 16.
+    Adapting this to work for >= 16 players is a work in progress.
+
+    Returns a list of pairs of players for the next round of a match.
   
     Assuming that there are an even number of players registered, each player
     appears exactly once in the pairings.  Each player is paired with another
@@ -235,6 +239,7 @@ def swissPairings2(tiesEnabled=False, tourneyID=1):
     pass 
 
 def makePointsDict(tiesEnabled=False, tourneyID=1):
+    """ Returns a dictionary key playerID, value points accrued in a tourney"""
     pts = {}
     standings = playerStandings(tiesEnabled,tourneyID)
     # check for ties enabled, if not
@@ -248,7 +253,7 @@ def makePointsDict(tiesEnabled=False, tourneyID=1):
     return pts
 
 def getBestPairings(tiesEnabled=False, tourneyID=1):
-    # iniialize holder
+    """Evaluator for recursive swissPairings"""
     bestHolder = []
     results = connect2('select winner, loser from results', True)
     standings = playerStandings() # may be redundant, test removal, nb
@@ -273,7 +278,7 @@ def getBestPairings(tiesEnabled=False, tourneyID=1):
     return bestHolder[0][1] #first/best one, set index
         
 def makePlayerList():
-    # get player list and do a bit of formatting
+    """ Return prettified player list """
     playerTuples = connect2("SELECT playerID FROM players", True)
     playerList = []
     for item in playerTuples:
@@ -282,6 +287,7 @@ def makePlayerList():
 
 #   count call count players, nb
 def genPairs(playerList):
+    """ Recursive pair generator """
     #print "called genPairs" #nb
     if len(playerList) < 2:
         yield playerList
