@@ -109,9 +109,9 @@ def playerStandings(tiesEnabled=False, tourneyID=1):
       sorted by points
     """
     tiesStatement = '''
-        drop view if exists losses;
-        drop view if exists wins;
-        drop view if exists tieSum;
+        drop view if exists losses cascade;
+        drop view if exists wins cascade;
+        drop view if exists tieSum cascade;
         drop view if exists ties;
 
         create view wins as select winner as id, count(*) as wins  
@@ -147,7 +147,7 @@ def playerStandings(tiesEnabled=False, tourneyID=1):
             pts desc;''' % (tourneyID, tourneyID, tourneyID, tourneyID)
 
     noTiesStatement = '''
-        drop view if exists standings;
+        drop view if exists standings cascade;
             drop view if exists ties cascade;
             drop view if exists losses cascade;
             drop view if exists wins;
@@ -260,7 +260,7 @@ def swissPairings(tiesEnabled=False, tourneyID=1):
         holder.append((pairing[0][0], pairing [0][1], pairing[1][0], pairing [1][1]))
     return holder
 
-def makePointsDict(tiesEnabled=False, tourneyID=1):
+def makePointsDict(tiesEnabled=False, tourneyID=1): #nb, only used in recursive swiss
     """ Returns a dictionary key playerID, value points accrued in a tourney"""
     pts = {}
     standings = playerStandings(tiesEnabled,tourneyID)
@@ -299,7 +299,7 @@ def getBestPairings(tiesEnabled=False, tourneyID=1):
     bestHolder.sort(key=lambda x: x[0])
     return bestHolder[0][1] #first/best one, set index
         
-def makePlayerList():
+def makePlayerList():  #nb, only used in recursive swiss
     """ Return prettified player list """
     playerTuples = connect2("SELECT playerID FROM players", True)
     playerList = []
