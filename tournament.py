@@ -15,6 +15,8 @@
 # tourney table to ensure data integrity
 # add tourney function
 # alter table (players) to add extra columns
+# get expanded standing to work under all circumstances (no ties, multi tournies)
+# condense sql queries (nesting?)
 
 import psycopg2
 
@@ -174,6 +176,11 @@ def playerStandings(tiesEnabled=False, tourneyID=1):
         return connect2(tiesStatement, True)
     else: 
         return connect2(noTiesStatement, True)
+
+def expandedStandings():
+    """ returns standings but now point ties are sorted by strength of schedule """
+    """ only for use with tourney1 and tiesEnabled, a work in progress """
+    return connect2(open('expandedStandings.sql', "r").read(), True)
 
 def reportMatch(winner, loser, draw=False, tourneyID=1):
     """Records the outcome of a single match between two players.
