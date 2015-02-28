@@ -194,10 +194,13 @@ def swissPairings(tiesEnabled=False, tourneyID=1):
         id2: the second player's unique id
         name2: the second player's name
     """
-    # bye needed?
+    
     if countPlayers(tourneyID=1) % 2 != 0:
         registerPlayer("BYE", tourneyID)
-    standings = playerStandings(tiesEnabled, tourneyID)
+    if tiesEnabled = True AND tourneyID=1:
+        standings = expandedStandings()
+    else:    
+        standings = playerStandings(tiesEnabled, tourneyID)
     # rip 'em apart and zip 'em back together again
     i, j = standings[::2], standings[1::2]
     pairings = zip(i,j)
