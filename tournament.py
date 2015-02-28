@@ -1,22 +1,6 @@
 #!/usr/bin/env python
 # 
 # tournament.py -- implementation of a Swiss-system tournament
-#
-
-# ---- to do list ---- nb
-#   bye implementation - if count is even addPlayer
-#   tie implementation - DONE
-#   tourney implementation - underway
-#   remove tester.sql/withTies.sql from git
-#   cursor.execute(open("schema.sql", "r").read())
-#   newstr = "".join(oldstr.split('\n'))
-
-#-----wish list ---- nb
-# tourney table to ensure data integrity
-# add tourney function
-# alter table (players) to add extra columns
-# get expanded standing to work under all circumstances (no ties, multi tournies)
-# condense sql queries (nesting?)
 
 import psycopg2
 
@@ -184,21 +168,47 @@ def expandedStandings():
 
 def reportMatch(winner, loser, draw=False, tourneyID=1):
     """Records the outcome of a single match between two players.
-
     Args:
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
       draw: set to True for any tie.  Winner/Loser order no longer matters
     """
-    
     db = connect()
     c = db.cursor()
     c.execute("INSERT INTO results (winner, loser, draw, tourneyID) values (%s, %s, %s, %s)", (winner, loser, draw, tourneyID))
     db.commit()
     db.close()
         
-def swissPairingsRecursive(tiesEnabled=False, tourneyID=1):
+def swissPairings(tiesEnabled=False, tourneyID=1):
+    """Returns a list of pairs of players for the next round of a match.
+  
+    Assuming that there are an even number of players registered, each player
+    appears exactly once in the pairings.  Each player is paired with another
+    player with an equal or nearly-equal win record, that is, a player adjacent
+    to him or her in the standings.
+  
+    Returns:
+      A list of tuples, each of which contains (id1, name1, id2, name2)
+        id1: the first player's unique id
+        name1: the first player's name
+        id2: the second player's unique id
+        name2: the second player's name
+    """
+    # bye needed?
+    if countPlayers(tourneyID=1) % 2 != 0:
+        registerPlayer("BYE", tourneyID)
+    standings = playerStandings(tiesEnabled, tourneyID)
+    # rip 'em apart and zip 'em back together again
+    i, j = standings[::2], standings[1::2]
+    pairings = zip(i,j)
+    holder = []
+    for pairing in pairings:
+        holder.append((pairing[0][0], pairing [0][1], pairing[1][0], pairing [1][1]))
+    return holder
 
+# ----  ALL CODE AFTER THIS POINT EXPERIMENTAL USING RECURSION --- 
+# ----  NOT USED FOR ASSIGNMENT
+def swissPairingsRecursive(tiesEnabled=False, tourneyID=1):
     """Recursively generates and evaluates all possible pairings
     Works brilliantly for up to 8 players.  Blows up for 16.
     Adapting this to work for >= 16 players is a work in progress.
@@ -240,33 +250,6 @@ def swissPairingsRecursive(tiesEnabled=False, tourneyID=1):
                             pair[1], nameFromID(pair[1])))
         return pairings
 
-def swissPairings(tiesEnabled=False, tourneyID=1):
-    """Returns a list of pairs of players for the next round of a match.
-  
-    Assuming that there are an even number of players registered, each player
-    appears exactly once in the pairings.  Each player is paired with another
-    player with an equal or nearly-equal win record, that is, a player adjacent
-    to him or her in the standings.
-  
-    Returns:
-      A list of tuples, each of which contains (id1, name1, id2, name2)
-        id1: the first player's unique id
-        name1: the first player's name
-        id2: the second player's unique id
-        name2: the second player's name
-    """
-    # bye needed?
-    if countPlayers(tourneyID=1) % 2 != 0:
-        registerPlayer("BYE", tourneyID)
-    standings = playerStandings(tiesEnabled, tourneyID)
-    # rip 'em apart and zip 'em back together again
-    i, j = standings[::2], standings[1::2]
-    pairings = zip(i,j)
-    holder = []
-    for pairing in pairings:
-        holder.append((pairing[0][0], pairing [0][1], pairing[1][0], pairing [1][1]))
-    return holder
-
 def makePointsDict(tiesEnabled=False, tourneyID=1): #nb, only used in recursive swiss
     """ Returns a dictionary key playerID, value points accrued in a tourney"""
     pts = {}
@@ -281,7 +264,7 @@ def makePointsDict(tiesEnabled=False, tourneyID=1): #nb, only used in recursive 
             pts[player[0]] = int(player[5])
     return pts
 
-def getBestPairings(tiesEnabled=False, tourneyID=1):
+def getBestPairings(tiesEnabled=False, tourneyID=1):  #nb, only used in recursive swiss
     """Evaluator for recursive swissPairings"""
     bestHolder = []
     results = connect2('select winner, loser from results', True)
@@ -314,15 +297,14 @@ def makePlayerList():  #nb, only used in recursive swiss
         playerList.append(item[0])
     return playerList
 
-#   count call count players, nb
-def genPairs(playerList):
-    """ Recursive pair generator """
+def genPairs(playerList):  # only used in recursive swiss
+    """ Recursive pair generator """  
     #print "called genPairs" #nb
-    if len(playerList) < 2:
+    if len(playerList) < 2: #   count call count players, nb
         yield playerList
         return
     first = playerList[0]
-    for i in range(1, len(playerList)):
+    for i in range(1, len(playerList)):  #   count call count players, nb
         pair = (first, playerList[i])
         for remainder in genPairs(playerList[1:i]+playerList[i+1:]):
             yield [pair] + remainder
