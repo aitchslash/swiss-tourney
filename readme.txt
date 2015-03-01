@@ -7,7 +7,7 @@ expandedStandings.sql - a long query, w/ multiple vies
 Works sufficiently to pass the tests supplied.
 
 --- General Notes ---
-If usings ties or multiple tourneys please remember to pass: tiesEnabled=True and tourneyID=# into swissPairings()
+If using ties or multiple tourneys please remember to pass: tiesEnabled=True and tourneyID=# into swissPairings()
 
 I'd prefer to implement a recursive generator to create and then evaluate all potential matches.  Currently, this works nicely for eight players but blows up with sixteen.  As such I've moved all related code to the bottom of the file and disabled it for the test.  Hopes are to get it going at some point.
 
@@ -31,8 +31,7 @@ Simply adds a player when playerCount is odd
 -no real worry about repeat matches with existing players
 
 ---- Wish List -----
--Get def Connect2 to work for all SQL queries.
+--Unify connect and connect2 to work for all SQL queries.
 -Add addTourney function
 -Create testing suite with multi tourneys, random win generation, etc.
 -Condense/refactor SQL queries (they seem unweildy)
--Unify connect and connect2
