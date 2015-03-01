@@ -1,3 +1,6 @@
+--- Designed to run on a VM using POSTGREsql ---
+--- with psycopg2 module installed ---
+
 --- Files ---
 readme.txt - this file
 tournament.sql - creates the database
