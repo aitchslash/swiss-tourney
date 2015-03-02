@@ -1,13 +1,21 @@
 --- Designed to run on a VM using POSTGREsql ---
 --- with psycopg2 module installed ---
 
+--- Get Up and Running ---
+-from a psql prompt run \i tournament.sql to create the db
+-register the players using registerPlayer (name, tourneyID)
+-report results as they come in using reportResult
+-to get matchups run swissPairings(*ties=t/f, tourneyID)
+
 --- Files ---
 readme.txt - this file
 tournament.sql - creates the database
 tournament.py - the python code
-expandedStandings.sql - a long query, w/ multiple vies
+expandedStandings.sql - a long query, w/ multiple views
 
 Works sufficiently to pass the tests supplied.
+
+
 
 --- General Notes ---
 If using ties or multiple tourneys please remember to pass: tiesEnabled=True and tourneyID=# into swissPairings()
